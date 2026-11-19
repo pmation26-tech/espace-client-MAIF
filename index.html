@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Personnel MAIF</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chargement de la police Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icônes Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F9FAFB;
+            color: #1F2937;
+        }
+        /* Charte graphique Rouge #E30613 & Blanc */
+        .bg-brand-red { background-color: #E30613; }
+        .hover-bg-brand-red:hover { background-color: #C20510; }
+        .text-brand-red { color: #E30613; }
+        .border-brand-red { border-color: #E30613; }
+
+        /* Animations douces */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ==================== BARRE DE NAVIGATION SUPÉRIEURE ==================== -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo & Titre -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-red text-white font-extrabold text-lg sm:text-xl tracking-wider px-3 py-1.5 rounded-xl shadow-sm select-none">
+                    MAIF
+                </div>
+                <div class="h-6 w-px bg-gray-300 hidden sm:block"></div>
+                <span class="font-semibold text-gray-800 text-sm sm:text-lg">Espace Personnel MAIF</span>
+            </div>
+
+            <!-- Contrôles utilisateur (visible uniquement une fois connecté) -->
+            <div id="header-user-controls" class="hidden flex items-center space-x-3 sm:space-x-4">
+                <div class="hidden sm:flex items-center space-x-1.5 text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-brand-red"></i>
+                    <span id="live-datetime">--/--/---- --:--:--</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                    <i data-lucide="user-check" class="w-4 h-4 text-brand-red"></i>
+                    <span class="font-medium text-gray-900">Marie Turquoise</span>
+                </div>
+                <button type="button" onclick="logout()" class="flex items-center space-x-1.5 text-sm font-medium text-brand-red hover:bg-red-50 px-3 py-2 rounded-xl border border-red-200 transition cursor-pointer">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>Déconnexion</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== CONTENEUR DE NOTIFICATIONS (TOAST) ==================== -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- ==================== 1. ÉCRAN DE CONNEXION ==================== -->
+    <main id="login-screen" class="flex-grow flex items-center justify-center p-4 bg-gradient-to-br from-white via-red-50/40 to-gray-100">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden fade-in">
+            <!-- En-tête rouge -->
+            <div class="bg-brand-red px-6 py-8 text-center text-white">
+                <div class="inline-block bg-white text-brand-red font-black text-xl tracking-widest px-4 py-1.5 rounded-xl mb-3 shadow">
+                    MAIF
+                </div>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Espace Personnel MAIF</h1>
+            </div>
+
+            <!-- Formulaire d'accès sans placeholder ni indice -->
+            <form id="login-form" onsubmit="handleLogin(event)" class="p-6 sm:p-8 space-y-6">
+                <div>
+                    <label for="access-code" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Code d'accès
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <i data-lucide="lock" class="h-5 w-5 text-gray-400"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="access-code" 
+                            autocomplete="off"
+                            class="block w-full pl-11 pr-4 py-3 text-gray-900 font-semibold tracking-wider uppercase bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:border-red-600 focus:bg-white transition outline-none"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- Message d'erreur sobre sans révéler le code -->
+                <div id="login-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-brand-red text-sm flex items-center space-x-2">
+                    <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
+                    <span>Code d'accès invalide. Veuillez vérifier votre saisie.</span>
+                </div>
+
+                <button 
+                    type="submit" 
+                    class="w-full bg-brand-red hover-bg-brand-red text-white font-bold py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 text-base cursor-pointer"
+                >
+                    <span>Valider</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- ==================== 2. TABLEAU DE BORD ==================== -->
+    <div id="dashboard-screen" class="hidden flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 fade-in">
+        
+        <!-- Horloge mobile -->
+        <div class="sm:hidden mb-4 flex items-center justify-end">
+            <div class="flex items-center space-x-1.5 text-xs font-medium text-gray-600 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-brand-red"></i>
+                <span id="live-datetime-mobile">--/--/---- --:--:--</span>
+            </div>
+        </div>
+
+        <!-- Bannière d'informations du titulaire et capital global -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-brand-red"></div>
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <!-- Identité & Contrat -->
+                <div class="space-y-1.5">
+                    <div class="inline-flex items-center space-x-2 px-2.5 py-1 rounded-lg bg-red-50 text-brand-red text-xs font-bold uppercase tracking-wider">
+                        <span>Contrat Assurance Vie Multisupport</span>
+                        <span>•</span>
+                        <span>N° 2015-AV-884920</span>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Mme Marie Turquoise</h2>
+                    <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 pt-1">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="calendar" class="w-4 h-4 text-brand-red"></i>
+                            Date de souscription : <strong class="text-gray-800">07/07/2015</strong>
+                        </span>
+                        <span class="hidden sm:inline text-gray-300">|</span>
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="sliders" class="w-4 h-4 text-brand-red"></i>
+                            Mode de gestion : <strong id="header-profile-badge" class="text-gray-800">Gestion libre</strong>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Encart Montant Total en temps réel -->
+                <div class="bg-red-50/70 border border-red-100 rounded-2xl p-4 sm:px-6 sm:py-4 text-left lg:text-right">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 block">Valorisation totale du contrat</span>
+                    <div id="global-balance-display" class="text-3xl sm:text-4xl font-extrabold text-brand-red mt-1">
+                        2 955 000,00 €
+                    </div>
+                    <span class="text-xs text-green-700 font-medium inline-flex items-center gap-1 mt-1">
+                        <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+                        Valorisation actualisée en temps réel
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grille Principale : Menu Latéral + Contenu Dynamique -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Menu de navigation (5 onglets) -->
+            <nav class="lg:col-span-3 space-y-2">
+                <button type="button" onclick="switchTab('soldes')" id="nav-soldes" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left font-semibold text-sm transition bg-brand-red text-white shadow-sm cursor-pointer">
+                    <i data-lucide="pie-chart" class="w-5 h-5 flex-shrink-0"></i>
+                    <span>Consultation des soldes</span>
+                </button>
+
+                <button type="button" onclick="switchTab('operations')" id="nav-operations" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left font-medium text-sm text-gray-700 bg-white hover:bg-red-50 hover:text-brand-red border border-gray-200 transition cursor-pointer">
+                    <i data-lucide="list-ordered" class="w-5 h-5 flex-shrink-0"></i>
+                    <span>Détail des opérations</span>
+                </button>
+
+                <button type="button" onclick="switchTab('gestion')" id="nav-gestion" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left font-medium text-sm text-gray-700 bg-white hover:bg-red-50 hover:text-brand-red border border-gray-200 transition cursor-pointer">
+                    <i data-lucide="wallet" class="w-5 h-5 flex-shrink-0"></i>
+                    <span>Opérations de gestion</span>
+                </button>
+
+                <button type="button" onclick="switchTab('placements')" id="nav-placements" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left font-medium text-sm text-gray-700 bg-white hover:bg-red-50 hover:text-brand-red border border-gray-200 transition cursor-pointer">
+                    <i data-lucide="arrow-left-right" class="w-5 h-5 flex-shrink-0"></i>
+                    <span>Modification des placements</span>
+                </button>
+
+                <button type="button" onclick="switchTab('documents')" id="nav-documents" class="nav-btn w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left font-medium text-sm text-gray-700 bg-white hover:bg-red-50 hover:text-brand-red border border-gray-200 transition cursor-pointer">
+                    <i data-lucide="file-text" class="w-5 h-5 flex-shrink-0"></i>
+                    <span>Documents contractuels</span>
+                </button>
+            </nav>
+
+            <!-- Zone d'affichage des sections -->
+            <div class="lg:col-span-9">
+
+                <!-- ==================== ONGLET 1 : CONSULTATION DES SOLDES ==================== -->
+                <section id="tab-soldes" class="tab-content space-y-6 fade-in">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <h3 class="text-xl font-bold text-gray-900 mb-1">Consultation des soldes</h3>
+                        <p class="text-sm text-gray-500 mb-6">Visualisez en temps réel la répartition entre votre fonds en euros et vos unités de compte.</p>
+
+                        <!-- Cartes Récapitulatives -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                            <!-- Fonds en Euros -->
+                            <div class="p-5 rounded-2xl border border-gray-200 bg-gray-50/60">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                        <span class="w-3 h-3 rounded-full bg-brand-red inline-block"></span>
+                                        Fonds en Euros (Capital garanti)
+                                    </span>
+                                    <span id="euros-pct-badge" class="text-xs font-bold bg-red-100 text-brand-red px-2.5 py-0.5 rounded-full">70,0 %</span>
+                                </div>
+                                <div id="euros-balance-display" class="text-2xl font-extrabold text-gray-900 mt-1">
+                                    2 068 500,00 €
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">Support sécurisé • Disponibilité permanente</p>
+                            </div>
+
+                            <!-- Total Unités de Compte -->
+                            <div class="p-5 rounded-2xl border border-gray-200 bg-gray-50/60">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                        <span class="w-3 h-3 rounded-full bg-gray-800 inline-block"></span>
+                                        Unités de Compte (Supports dynamiques)
+                                    </span>
+                                    <span id="uc-pct-badge" class="text-xs font-bold bg-gray-200 text-gray-800 px-2.5 py-0.5 rounded-full">30,0 %</span>
+                                </div>
+                                <div id="uc-total-display" class="text-2xl font-extrabold text-gray-900 mt-1">
+                                    886 500,00 €
+                                </div>
+                                <p class="text-xs text-green-600 font-medium mt-2">Supports diversifiés actions & immobilier</p>
+                            </div>
+                        </div>
+
+                        <!-- Barre visuelle de répartition -->
+                        <div class="mb-8">
+                            <div class="flex justify-between text-xs font-semibold text-gray-600 mb-1.5">
+                                <span>Répartition visuelle du portefeuille</span>
+                                <span id="ratio-text">70,0% Fonds Euros / 30,0% Unités de Compte</span>
+                            </div>
+                            <div class="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden flex">
+                                <div id="bar-euros" class="bg-brand-red h-full transition-all duration-500" style="width: 70%"></div>
+                                <div id="bar-uc" class="bg-gray-800 h-full transition-all duration-500" style="width: 30%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Détail ligne par ligne des Unités de Compte -->
+                        <h4 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3">Détail de vos unités de compte</h4>
+                        <div class="overflow-x-auto border border-gray-200 rounded-xl">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50 text-gray-600 font-semibold">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">Support d'investissement</th>
+                                        <th class="px-4 py-3 text-left">Catégorie</th>
+                                        <th class="px-4 py-3 text-right">Valorisation</th>
+                                        <th class="px-4 py-3 text-right">Évolution</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="uc-table-body" class="divide-y divide-gray-200 bg-white">
+                                    <!-- Rempli dynamiquement par JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== ONGLET 2 : DÉTAIL DES OPÉRATIONS ==================== -->
+                <section id="tab-operations" class="tab-content hidden space-y-6 fade-in">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Détail des opérations</h3>
+                                <p class="text-sm text-gray-500">Historique filtrable de vos versements, retraits (rachats), arbitrages et intérêts perçus.</p>
+                            </div>
+                            <!-- Filtre par type -->
+                            <div>
+                                <select id="filter-op-type" onchange="renderOperations()" class="text-sm border border-gray-300 rounded-xl px-3.5 py-2 bg-white text-gray-700 font-medium focus:ring-2 focus:ring-red-600 outline-none">
+                                    <option value="ALL">Toutes les opérations</option>
+                                    <option value="Versement">Versements</option>
+                                    <option value="Intérêts">Intérêts perçus</option>
+                                    <option value="Arbitrage">Arbitrages</option>
+                                    <option value="Rachat">Retraits (Rachats)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto border border-gray-200 rounded-xl">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50 text-gray-600 font-semibold">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">Date</th>
+                                        <th class="px-4 py-3 text-left">Nature de l'opération</th>
+                                        <th class="px-4 py-3 text-left">Support concerné</th>
+                                        <th class="px-4 py-3 text-right">Montant</th>
+                                        <th class="px-4 py-3 text-center">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="operations-table-body" class="divide-y divide-gray-200 bg-white">
+                                    <!-- Rempli dynamiquement par JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== ONGLET 3 : OPÉRATIONS DE GESTION ==================== -->
+                <section id="tab-gestion" class="tab-content hidden space-y-6 fade-in">
+                    <!-- Encadré d'alerte rouge et blanc (Avis de rejet d'opération) -->
+                    <div id="rejection-notice-box" class="hidden bg-white rounded-2xl border-2 border-brand-red shadow-lg p-6 fade-in relative">
+                        <button type="button" onclick="closeRejectionNotice()" aria-label="Fermer l'alerte" class="absolute top-4 right-4 text-gray-400 hover:text-brand-red p-1.5 rounded-lg hover:bg-red-50 transition cursor-pointer">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                        <div class="flex items-start space-x-4">
+                            <div class="w-11 h-11 rounded-xl bg-red-50 text-brand-red flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i data-lucide="alert-octagon" class="w-6 h-6"></i>
+                            </div>
+                            <div class="space-y-2 pr-6">
+                                <h4 class="text-base sm:text-lg font-bold text-brand-red">L'avis de rejet d'opération :</h4>
+                                <p id="rejection-notice-text" class="text-sm text-gray-800 leading-relaxed"></p>
+                                <p class="text-sm font-semibold text-gray-900 pt-1">L'équipe MAIF</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Formulaire Versement Libre -->
+                        <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div class="w-10 h-10 rounded-xl bg-red-50 text-brand-red flex items-center justify-center mb-4">
+                                    <i data-lucide="plus-circle" class="w-6 h-6"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-900">Versement libre ponctuel</h3>
+                                <p class="text-sm text-gray-500 mt-1 mb-5">Effectuez un versement libre directement depuis votre compte bancaire externe.</p>
+                                
+                                <form onsubmit="handleFreeDeposit(event)" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Compte bancaire externe</label>
+                                        <input type="text" readonly value="FR76 3000 4000 •••• 8921 (Compte Courant)" class="w-full text-sm bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-600">
+                                    </div>
+                                    <div>
+                                        <label for="deposit-amount" class="block text-xs font-semibold uppercase text-gray-600 mb-1">Montant du versement (€)</label>
+                                        <input type="number" id="deposit-amount" min="1" step="any" placeholder="Ex: 5000" required class="w-full text-sm border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-red-600 outline-none font-semibold">
+                                    </div>
+                                    <div>
+                                        <label for="deposit-target" class="block text-xs font-semibold uppercase text-gray-600 mb-1">Support d'affectation</label>
+                                        <select id="deposit-target" class="w-full text-sm border border-gray-300 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-red-600 outline-none">
+                                            <option value="euros">100% Fonds en Euros</option>
+                                            <option value="uc1">100% Unité de Compte Actions Europe</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" id="btn-free-deposit" class="w-full bg-brand-red hover-bg-brand-red text-white font-semibold py-3 rounded-xl shadow-sm transition cursor-pointer mt-2 flex items-center justify-center space-x-2">
+                                        <span>Valider le versement libre</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Formulaire Versements Programmés -->
+                        <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div class="w-10 h-10 rounded-xl bg-red-50 text-brand-red flex items-center justify-center mb-4">
+                                    <i data-lucide="repeat" class="w-6 h-6"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-900">Versements réguliers programmés</h3>
+                                <p class="text-sm text-gray-500 mt-1 mb-5">Programmez un prélèvement automatique mensuel depuis votre compte bancaire externe.</p>
+                                
+                                <form onsubmit="handleScheduledDeposit(event)" class="space-y-4">
+                                    <div>
+                                        <label for="sched-amount" class="block text-xs font-semibold uppercase text-gray-600 mb-1">Montant mensuel (€ / mois)</label>
+                                        <input type="number" id="sched-amount" min="1" step="any" value="1500" required class="w-full text-sm border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-red-600 outline-none font-semibold">
+                                    </div>
+                                    <div>
+                                        <label for="sched-day" class="block text-xs font-semibold uppercase text-gray-600 mb-1">Jour de prélèvement</label>
+                                        <select id="sched-day" class="w-full text-sm border border-gray-300 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-red-600 outline-none">
+                                            <option value="05">Le 05 de chaque mois</option>
+                                            <option value="10" selected>Le 10 de chaque mois</option>
+                                            <option value="25">Le 25 de chaque mois</option>
+                                        </select>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs flex items-center gap-2">
+                                        <i data-lucide="info" class="w-4 h-4 text-brand-red flex-shrink-0"></i>
+                                        <span>Prélèvement SEPA sur le compte externe enregistré.</span>
+                                    </div>
+                                    <button type="submit" id="btn-sched-deposit" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl shadow-sm transition cursor-pointer mt-2 flex items-center justify-center space-x-2">
+                                        <span>Valider le versement programmé</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== ONGLET 4 : MODIFICATION DES PLACEMENTS ==================== -->
+                <section id="tab-placements" class="tab-content hidden space-y-6 fade-in">
+                    <!-- Sélecteur de profil de gestion -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <h3 class="text-xl font-bold text-gray-900 mb-1">Profil de gestion du contrat</h3>
+                        <p class="text-sm text-gray-500 mb-5">Modifiez votre orientation de gestion selon vos objectifs patrimoniaux.</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <button type="button" onclick="setManagementProfile('Gestion libre', this)" id="prof-libre" class="profile-card p-4 rounded-xl border-2 border-brand-red bg-red-50/40 text-left transition cursor-pointer">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-gray-900 text-sm">Gestion libre</span>
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-brand-red"></i>
+                                </div>
+                                <p class="text-xs text-gray-600">Vous gérez librement vos supports et vos arbitrages en autonomie.</p>
+                            </button>
+
+                            <button type="button" onclick="setManagementProfile('Gestion pilotée - Équilibre', this)" id="prof-equilibre" class="profile-card p-4 rounded-xl border border-gray-200 bg-white hover:border-red-300 text-left transition cursor-pointer">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-gray-900 text-sm">Pilotée Équilibre</span>
+                                </div>
+                                <p class="text-xs text-gray-600">Allocation équilibrée entre sécurité et dynamisme.</p>
+                            </button>
+
+                            <button type="button" onclick="setManagementProfile('Gestion pilotée - Dynamique', this)" id="prof-dynamique" class="profile-card p-4 rounded-xl border border-gray-200 bg-white hover:border-red-300 text-left transition cursor-pointer">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-gray-900 text-sm">Pilotée Dynamique</span>
+                                </div>
+                                <p class="text-xs text-gray-600">Recherche de performance à long terme sur les marchés financiers.</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Outil d'Arbitrage en ligne -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <h3 class="text-xl font-bold text-gray-900 mb-1">Réaliser un arbitrage en ligne</h3>
+                        <p class="text-sm text-gray-500 mb-5">Déplacez votre épargne du Fonds en Euros vers une Unité de Compte ou inversement.</p>
+
+                        <form onsubmit="handleArbitrage(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label for="arb-source" class="block text-xs font-semibold uppercase text-gray-600 mb-1">Support à débiter (Source)</label>
+                                <select id="arb-source" class="w-full text-sm border border-gray-300 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-red-600 outline-none">
+                                    <option value="euros">Fonds en Euros</option>
+                                    <option value="uc1">Unité de Compte Actions Europe</option>
+                                    <option value="uc2">Unité de Compte Immobilier SCPI</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="arb-target" class="block text-xs font-semibold uppercase text-gray-600 mb-1">Support à créditer (Cible)</label>
+                                <select id="arb-target" class="w-full text-sm border border-gray-300 rounded-xl px-3.5 py-2.5 bg-white focus:ring-2 focus:ring-red-600 outline-none">
+                                    <option value="uc1">Unité de Compte Actions Europe</option>
+                                    <option value="uc2">Unité de Compte Immobilier SCPI</option>
+                                    <option value="euros">Fonds en Euros</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="arb-amount" class="block text-xs font-semibold uppercase text-gray-600 mb-1">Montant à arbitrer (€)</label>
+                                <input type="number" id="arb-amount" min="100" step="any" placeholder="Ex: 25000" required class="w-full text-sm border border-gray-300 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-red-600 outline-none font-semibold">
+                            </div>
+
+                            <div class="md:col-span-3 pt-2">
+                                <button type="submit" class="bg-brand-red hover-bg-brand-red text-white font-semibold px-6 py-3 rounded-xl shadow-sm transition cursor-pointer inline-flex items-center space-x-2">
+                                    <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                                    <span>Exécuter l'arbitrage</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- ==================== ONGLET 5 : DOCUMENTS CONTRACTUELS ==================== -->
+                <section id="tab-documents" class="tab-content hidden space-y-6 fade-in">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                        <h3 class="text-xl font-bold text-gray-900 mb-1">Documents contractuels et fiscaux</h3>
+                        <p class="text-sm text-gray-500 mb-6">Téléchargez vos relevés de situation annuels, avis d'opérations et documents fiscaux (IFU).</p>
+
+                        <div class="divide-y divide-gray-200 border border-gray-200 rounded-xl overflow-hidden">
+                            <!-- Document 1 -->
+                            <div class="p-4 bg-white hover:bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
+                                <div class="flex items-start space-x-3.5">
+                                    <div class="p-2.5 bg-red-50 text-brand-red rounded-xl">
+                                        <i data-lucide="file-check-2" class="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 text-sm">Relevé de situation annuel</h4>
+                                        <p class="text-xs text-gray-500 mt-0.5">Contrat n° 2015-AV-884920 • Récapitulatif patrimonial</p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="downloadDocument('Releve_Situation_Annuel_MAIF_Fictif.txt', 'RELEVÉ DE SITUATION ANNUEL')" class="inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-xl border border-brand-red text-brand-red hover:bg-brand-red hover:text-white text-xs font-semibold transition cursor-pointer">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                    <span>Télécharger</span>
+                                </button>
+                            </div>
+
+                            <!-- Document 2 -->
+                            <div class="p-4 bg-white hover:bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
+                                <div class="flex items-start space-x-3.5">
+                                    <div class="p-2.5 bg-red-50 text-brand-red rounded-xl">
+                                        <i data-lucide="file-text" class="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 text-sm">Avis d'opérations</h4>
+                                        <p class="text-xs text-gray-500 mt-0.5">Historique des mouvements et intérêts crédités</p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="downloadDocument('Avis_Operations_MAIF_Fictif.txt', 'AVIS D\'OPÉRATIONS')" class="inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-xl border border-brand-red text-brand-red hover:bg-brand-red hover:text-white text-xs font-semibold transition cursor-pointer">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                    <span>Télécharger</span>
+                                </button>
+                            </div>
+
+                            <!-- Document 3 -->
+                            <div class="p-4 bg-white hover:bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
+                                <div class="flex items-start space-x-3.5">
+                                    <div class="p-2.5 bg-red-50 text-brand-red rounded-xl">
+                                        <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 text-sm">Imprimé Fiscal Unique (IFU)</h4>
+                                        <p class="text-xs text-gray-500 mt-0.5">Justificatif fiscal annuel pour la déclaration de revenus</p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="downloadDocument('Imprime_Fiscal_Unique_IFU_MAIF_Fictif.txt', 'IMPRIMÉ FISCAL UNIQUE (IFU)')" class="inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-xl border border-brand-red text-brand-red hover:bg-brand-red hover:text-white text-xs font-semibold transition cursor-pointer">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                    <span>Télécharger</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Pied de page -->
+    <footer class="bg-white border-t border-gray-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center text-xs text-gray-500">
+            <span>© Espace Personnel MAIF</span>
+        </div>
+    </footer>
+
+    <!-- ==================== SCRIPT LOGIQUE & INTERACTIVITÉ ==================== -->
+    <script>
+        // Initialisation des icônes Lucide
+        lucide.createIcons();
+
+        // Horloge en temps réel au format JJ/MM/AAAA HH:MM:SS
+        function updateLiveDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const formatted = `${dateStr} ${timeStr}`;
+
+            const desktopClock = document.getElementById('live-datetime');
+            const mobileClock = document.getElementById('live-datetime-mobile');
+            if (desktopClock) desktopClock.textContent = formatted;
+            if (mobileClock) mobileClock.textContent = formatted;
+        }
+        updateLiveDateTime();
+        setInterval(updateLiveDateTime, 1000);
+
+        const STORAGE_KEY_AUTH = 'maif_fictif_isLoggedIn';
+        const STORAGE_KEY_STATE = 'maif_fictif_accountState';
+
+        // État initial du compte de Mme Marie Turquoise (2 955 000,00 €)
+        const defaultState = {
+            accessCode: "D3476M",
+            owner: "Marie Turquoise",
+            contractNumber: "2015-AV-884920",
+            subscriptionDate: "07/07/2015",
+            managementProfile: "Gestion libre",
+            fondsEuros: 2068500.00, // 70% de 2 955 000,00 €
+            unitesCompte: [
+                { id: "uc1", name: "Unité de Compte Actions Europe", category: "Actions Européennes", amount: 591000.00, perf: "+5,4 %" },
+                { id: "uc2", name: "Unité de Compte Immobilier SCPI", category: "Immobilier", amount: 295500.00, perf: "+2,1 %" }
+            ],
+            operations: [
+                { date: "02/03/2026", type: "Intérêts", label: "Intérêts annuels perçus (Fonds en Euros)", support: "Fonds en Euros", amount: 54200.00, status: "Exécuté" },
+                { date: "14/01/2026", type: "Versement", label: "Versement libre externe", support: "Fonds en Euros", amount: 25000.00, status: "Exécuté" },
+                { date: "10/11/2025", type: "Arbitrage", label: "Arbitrage Fonds Euros vers Actions Europe", support: "Unité de Compte Actions Europe", amount: 40000.00, status: "Exécuté" },
+                { date: "18/06/2024", type: "Rachat", label: "Rachat partiel programmé", support: "Fonds en Euros", amount: -15000.00, status: "Exécuté" },
+                { date: "07/07/2015", type: "Versement", label: "Versement initial à la souscription", support: "Multisupport", amount: 2500000.00, status: "Exécuté" }
+            ]
+        };
+
+        // Chargement depuis localStorage
+        let state = JSON.parse(JSON.stringify(defaultState));
+        try {
+            const savedState = localStorage.getItem(STORAGE_KEY_STATE);
+            if (savedState) {
+                state = { ...state, ...JSON.parse(savedState) };
+            }
+        } catch (e) {
+            console.error("Erreur lecture localStorage :", e);
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(state));
+            } catch (e) {
+                console.error("Erreur sauvegarde localStorage :", e);
+            }
+        }
+
+        // Formatage monétaire français (ex: 2 955 000,00 €)
+        function formatEuro(val) {
+            return val.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        }
+
+        // Notification visuelle Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-gray-900 text-white border-l-4 border-brand-red' : 'bg-red-700 text-white';
+            toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center space-x-2.5 fade-in pointer-events-auto max-w-sm`;
+            toast.innerHTML = `
+                <i data-lucide="check-circle" class="w-5 h-5 text-red-400 flex-shrink-0"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // 1. Authentification
+        function handleLogin(event) {
+            event.preventDefault();
+            const input = document.getElementById('access-code').value.trim().toUpperCase();
+            const errorBox = document.getElementById('login-error');
+
+            if (input === state.accessCode) {
+                errorBox.classList.add('hidden');
+                try {
+                    localStorage.setItem(STORAGE_KEY_AUTH, 'true');
+                } catch (e) {}
+                showDashboard();
+                showToast("Bienvenue dans votre Espace Personnel MAIF, Mme Turquoise.");
+            } else {
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            document.getElementById('header-user-controls').classList.remove('hidden');
+            restoreProfileUI();
+            updateDashboardUI();
+        }
+
+        function restoreProfileUI() {
+            document.getElementById('header-profile-badge').textContent = state.managementProfile;
+            const profileMap = {
+                'Gestion libre': 'prof-libre',
+                'Gestion pilotée - Équilibre': 'prof-equilibre',
+                'Gestion pilotée - Dynamique': 'prof-dynamique'
+            };
+            document.querySelectorAll('.profile-card').forEach(card => {
+                card.classList.remove('border-2', 'border-brand-red', 'bg-red-50/40');
+                card.classList.add('border', 'border-gray-200', 'bg-white');
+            });
+            const activeCardId = profileMap[state.managementProfile];
+            if (activeCardId && document.getElementById(activeCardId)) {
+                const activeCard = document.getElementById(activeCardId);
+                activeCard.classList.remove('border', 'border-gray-200', 'bg-white');
+                activeCard.classList.add('border-2', 'border-brand-red', 'bg-red-50/40');
+            }
+        }
+
+        function logout() {
+            try {
+                localStorage.removeItem(STORAGE_KEY_AUTH);
+            } catch (e) {}
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('header-user-controls').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('access-code').value = "";
+            document.getElementById('login-error').classList.add('hidden');
+        }
+
+        // Navigation entre onglets
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-red', 'text-white', 'font-semibold', 'shadow-sm');
+                btn.classList.add('bg-white', 'text-gray-700', 'font-medium', 'border', 'border-gray-200');
+            });
+
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('nav-' + tabId);
+            activeBtn.classList.remove('bg-white', 'text-gray-700', 'font-medium', 'border', 'border-gray-200');
+            activeBtn.classList.add('bg-brand-red', 'text-white', 'font-semibold', 'shadow-sm');
+        }
+
+        // Mise à jour de l'interface du tableau de bord
+        function updateDashboardUI() {
+            const totalUC = state.unitesCompte.reduce((sum, item) => sum + item.amount, 0);
+            const totalGlobal = state.fondsEuros + totalUC;
+
+            const pctEuros = ((state.fondsEuros / totalGlobal) * 100).toFixed(1);
+            const pctUC = ((totalUC / totalGlobal) * 100).toFixed(1);
+
+            document.getElementById('global-balance-display').textContent = formatEuro(totalGlobal);
+            document.getElementById('euros-balance-display').textContent = formatEuro(state.fondsEuros);
+            document.getElementById('uc-total-display').textContent = formatEuro(totalUC);
+
+            document.getElementById('euros-pct-badge').textContent = pctEuros.replace('.', ',') + ' %';
+            document.getElementById('uc-pct-badge').textContent = pctUC.replace('.', ',') + ' %';
+            document.getElementById('ratio-text').textContent = `${pctEuros.replace('.', ',')}% Fonds Euros / ${pctUC.replace('.', ',')}% Unités de Compte`;
+            document.getElementById('bar-euros').style.width = `${pctEuros}%`;
+            document.getElementById('bar-uc').style.width = `${pctUC}%`;
+
+            const ucBody = document.getElementById('uc-table-body');
+            ucBody.innerHTML = state.unitesCompte.map(uc => `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3.5 font-semibold text-gray-900">${uc.name}</td>
+                    <td class="px-4 py-3.5 text-gray-500">${uc.category}</td>
+                    <td class="px-4 py-3.5 text-right font-bold text-gray-900">${formatEuro(uc.amount)}</td>
+                    <td class="px-4 py-3.5 text-right">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700">
+                            ${uc.perf}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+
+            renderOperations();
+        }
+
+        // Onglet 2 : Historique filtrable
+        function renderOperations() {
+            const filter = document.getElementById('filter-op-type').value;
+            const tbody = document.getElementById('operations-table-body');
+
+            const filtered = filter === 'ALL' 
+                ? state.operations 
+                : state.operations.filter(op => op.type === filter);
+
+            tbody.innerHTML = filtered.map(op => {
+                const isNegative = op.amount < 0;
+                const amountClass = isNegative ? 'text-brand-red font-bold' : 'text-green-700 font-bold';
+                const sign = isNegative ? '' : '+';
+                return `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 py-3.5 text-gray-600 whitespace-nowrap">${op.date}</td>
+                        <td class="px-4 py-3.5 font-medium text-gray-900">${op.label}</td>
+                        <td class="px-4 py-3.5 text-gray-500">${op.support}</td>
+                        <td class="px-4 py-3.5 text-right whitespace-nowrap ${amountClass}">${sign}${formatEuro(op.amount)}</td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                ${op.status}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Onglet 3 : Traitement d'une demande de versement (spinner 5s + avis de rejet)
+        let depositProcessingTimer = null;
+
+        function processDepositAttempt(amount, buttonEl, defaultLabel) {
+            if (isNaN(amount) || amount <= 0) return;
+
+            if (depositProcessingTimer) {
+                clearTimeout(depositProcessingTimer);
+            }
+
+            const noticeBox = document.getElementById('rejection-notice-box');
+            noticeBox.classList.add('hidden');
+
+            const freeBtn = document.getElementById('btn-free-deposit');
+            const schedBtn = document.getElementById('btn-sched-deposit');
+            freeBtn.disabled = true;
+            schedBtn.disabled = true;
+            freeBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            schedBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            buttonEl.innerHTML = `
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Traitement de l'opération en cours...</span>
+            `;
+
+            depositProcessingTimer = setTimeout(() => {
+                freeBtn.disabled = false;
+                schedBtn.disabled = false;
+                freeBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                schedBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                buttonEl.innerHTML = `<span>${defaultLabel}</span>`;
+
+                const formattedAmount = formatEuro(amount);
+                const noticeTextEl = document.getElementById('rejection-notice-text');
+                noticeTextEl.innerHTML = `Votre versement de <strong class="text-brand-red">${formattedAmount}</strong> sur le contrat n° <strong>2015-AV-884920</strong> a été rejeté car le dossier est clôturé. Le contrat étant en cours de liquidation, le versement du capital disponible au bénéficiaire est en attente de finalisation (vérification du RIB / des pièces justificatives). Contactez votre conseiller`;
+
+                noticeBox.classList.remove('hidden');
+                lucide.createIcons();
+                noticeBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 5000);
+        }
+
+        function closeRejectionNotice() {
+            document.getElementById('rejection-notice-box').classList.add('hidden');
+        }
+
+        function handleFreeDeposit(event) {
+            event.preventDefault();
+            const amount = parseFloat(document.getElementById('deposit-amount').value);
+            const btn = document.getElementById('btn-free-deposit');
+            processDepositAttempt(amount, btn, 'Valider le versement libre');
+        }
+
+        function handleScheduledDeposit(event) {
+            event.preventDefault();
+            const amount = parseFloat(document.getElementById('sched-amount').value);
+            const btn = document.getElementById('btn-sched-deposit');
+            processDepositAttempt(amount, btn, 'Valider le versement programmé');
+        }
+
+        // Onglet 4 : Changement de profil de gestion
+        function setManagementProfile(profileName, btnElement) {
+            state.managementProfile = profileName;
+            saveState();
+            document.getElementById('header-profile-badge').textContent = profileName;
+
+            document.querySelectorAll('.profile-card').forEach(card => {
+                card.classList.remove('border-2', 'border-brand-red', 'bg-red-50/40');
+                card.classList.add('border', 'border-gray-200', 'bg-white');
+            });
+
+            if (btnElement) {
+                btnElement.classList.remove('border', 'border-gray-200', 'bg-white');
+                btnElement.classList.add('border-2', 'border-brand-red', 'bg-red-50/40');
+            }
+
+            showToast(`Profil modifié : ${profileName}`);
+        }
+
+        // Onglet 4 : Arbitrage entre supports
+        function handleArbitrage(event) {
+            event.preventDefault();
+            const source = document.getElementById('arb-source').value;
+            const target = document.getElementById('arb-target').value;
+            const amount = parseFloat(document.getElementById('arb-amount').value);
+
+            if (isNaN(amount) || amount <= 0) {
+                showToast("Veuillez saisir un montant valide.", "error");
+                return;
+            }
+
+            if (source === target) {
+                showToast("Veuillez sélectionner deux supports différents.", "error");
+                return;
+            }
+
+            if (source === 'euros' && state.fondsEuros < amount) {
+                showToast("Solde insuffisant sur le Fonds en Euros.", "error");
+                return;
+            }
+            if (source === 'uc1' && state.unitesCompte[0].amount < amount) {
+                showToast("Solde insuffisant sur l'Unité de Compte Actions Europe.", "error");
+                return;
+            }
+            if (source === 'uc2' && state.unitesCompte[1].amount < amount) {
+                showToast("Solde insuffisant sur l'Unité de Compte Immobilier SCPI.", "error");
+                return;
+            }
+
+            // Débit
+            if (source === 'euros') state.fondsEuros -= amount;
+            if (source === 'uc1') state.unitesCompte[0].amount -= amount;
+            if (source === 'uc2') state.unitesCompte[1].amount -= amount;
+
+            // Crédit
+            if (target === 'euros') state.fondsEuros += amount;
+            if (target === 'uc1') state.unitesCompte[0].amount += amount;
+            if (target === 'uc2') state.unitesCompte[1].amount += amount;
+
+            const names = {
+                euros: "Fonds en Euros",
+                uc1: "Unité de Compte Actions Europe",
+                uc2: "Unité de Compte Immobilier SCPI"
+            };
+            const today = new Date().toLocaleDateString('fr-FR');
+            state.operations.unshift({
+                date: today,
+                type: "Arbitrage",
+                label: `Arbitrage ${names[source]} → ${names[target]}`,
+                support: names[target],
+                amount: amount,
+                status: "Exécuté"
+            });
+
+            document.getElementById('arb-amount').value = '';
+            saveState();
+            updateDashboardUI();
+            showToast(`Arbitrage de ${formatEuro(amount)} exécuté avec succès.`);
+        }
+
+        // Onglet 5 : Téléchargement de document récapitulatif
+        function downloadDocument(filename, docTitle) {
+            const totalUC = state.unitesCompte.reduce((sum, item) => sum + item.amount, 0);
+            const totalGlobal = state.fondsEuros + totalUC;
+
+            const content = [
+                "=================================================================",
+                "ESPACE PERSONNEL MAIF (PROJET FICTIF)",
+                "Note : Ce projet est fictif et n'a aucun lien avec la maison d'assurance connue MAIF.",
+                docTitle,
+                "=================================================================",
+                `Titulaire du contrat : Mme ${state.owner}`,
+                `Numéro de contrat    : ${state.contractNumber}`,
+                `Date de souscription : ${state.subscriptionDate}`,
+                `Profil de gestion    : ${state.managementProfile}`,
+                `Date d'édition       : ${new Date().toLocaleString('fr-FR')}`,
+                "-----------------------------------------------------------------",
+                "SYNTHÈSE DE VALORISATION :",
+                `- Valorisation totale : ${formatEuro(totalGlobal)}`,
+                `- Fonds en Euros      : ${formatEuro(state.fondsEuros)}`,
+                `- Unités de Compte    : ${formatEuro(totalUC)}`,
+                "================================================================="
+            ].join("\n");
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Téléchargement de "${filename}" lancé.`);
+        }
+
+        // Restauration de la session au chargement de la page
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (localStorage.getItem(STORAGE_KEY_AUTH) === 'true') {
+                    showDashboard();
+                }
+            } catch (e) {}
+        });
+    </script>
+</body>
+</html>
